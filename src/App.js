@@ -1,4 +1,4 @@
-import React, { Component, Fragment } from 'react';
+import React, { useState, Fragment } from 'react';
 import Navbar from "./component/layout/Navbar";
 import Users from "./component/users/Users";
 import Search from "./component/users/Search";
@@ -9,55 +9,43 @@ import axios from "axios";
 import { BrowserRouter as Router, Switch, Route } from "react-router-dom"
 import './App.css';
 
-class App extends Component {
+const App = () => {
 
-  state = {
-    users: [],
-    loading: false,
-    alert: null,
-    user: {},
-    repos: [],
-  }
+  const [users, setUsers] = useState([]);
+  const [user, setUser] = useState({});
+  const [repos, setRepos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlertMsg] = useState(null);
 
-  searchUser = async (text) => {
+  const searchUser = async (text) => {
 
-    this.setState({
-      loading: true
-    });
+    setLoading(true);
 
     const res = await axios.get(`https://api.github.com/search/users?q=${text}
       &client_id=${process.env.REACT_APP_GITHUB_CLIENT_ID}
       &client_secret=${process.env.REACT_APP_GITHUB_CLIENT_SECRET}`
     );
 
-    this.setState({
-      users: res.data.items,
-      loading: false,
-    })
+    setUsers(res.data.items);
+    setLoading(false);
   }
 
-  getUser = async(username) =>{
+  const getUser = async (username) => {
 
-    this.setState({
-      loading: true
-    });
+    setLoading(true);
 
     const res = await axios.get(`https://api.github.com/users/${username}
       ?client_id=${process.env.REACT_APP_GITHUB_CLIENT_ID}
       &client_secret=${process.env.REACT_APP_GITHUB_CLIENT_SECRET}`
     );
 
-    this.setState({
-      user: res.data,
-      loading: false,
-    })
-
+    setUser(res.data);
+    setLoading(false);
   }
 
-  getUserRepos = async(username) =>{
-    this.setState({
-      loading: true
-    });
+  const getUserRepos = async (username) => {
+
+    setLoading(true);
 
     const res = await axios.get(`https://api.github.com/users/${username}
       /repos?per_page=5&sort=created:asc
@@ -65,92 +53,73 @@ class App extends Component {
       &client_secret=${process.env.REACT_APP_GITHUB_CLIENT_SECRET}`
     );
 
-    this.setState({
-      repos: res.data,
-      loading: false,
-    })
+    setRepos(res.data);
+    setLoading(false);
   }
 
-  clearUsers = () => {
-    this.setState({
-      users: [],
-      loading: false,
-      alert: null,
-    })
+  const clearUsers = () => {
+
+    setUsers([]);
+    setLoading(false);
+    setAlertMsg(null);
   }
 
-  setAlert = (msg, type) => {
-    this.setState({
-      alert: { msg, type }
-    });
+  const setAlert = (msg, type) => {
+
+    setAlertMsg({ msg, type });
 
     setTimeout(() => {
-      this.setState({
-        alert: null
-      });
+      setAlertMsg(null);
     }, 5000);
   }
 
-  render() {
-
-    const { 
-      loading, 
-      users, 
-      user, 
-      alert, 
-      repos 
-    } = this.state;
-
-    return (
-      <Router>
-        <div className="App">
-          <Navbar
-            title="Github Finder"
-            icon="fab fa-github"
+  return (
+    <Router>
+      <div className="App">
+        <Navbar
+          title="Github Finder"
+          icon="fab fa-github"
+        />
+        <div className="container">
+          <Alert
+            alert={alert}
           />
-          <div className="container">
-            <Alert
-              alert={alert}
+
+          <Switch>
+            <Route
+              exact path="/"
+              render={props => (
+                <Fragment>
+                  <Search
+                    searchUser={searchUser}
+                    clearUsers={clearUsers}
+                    showClearnBtn={users.length ? true : false}
+                    setAlert={setAlert}
+                  />
+                  <Users
+                    loading={loading}
+                    users={users}
+                  />
+                </Fragment>
+              )}
             />
 
-            <Switch>
-              <Route
-                exact path="/"
-                render={props => (
-                  <Fragment>
-                    <Search
-                      searchUser={this.searchUser}
-                      clearUsers={this.clearUsers}
-                      showClearnBtn={users.length ? true : false}
-                      setAlert={this.setAlert}
-                    />
-                    <Users
-                      loading={loading}
-                      users={users}
-                    />
-                  </Fragment>
-                )}
+            <Route exact path="/about" component={About} />
+            <Route exact path="/user/:username" render={props => (
+              <User
+                {...props}
+                getUser={getUser}
+                getUserRepos={getUserRepos}
+                repos={repos}
+                user={user}
+                loading={loading}
               />
-
-              <Route exact path = "/about" component = {About}/>
-              <Route exact path = "/user/:username" render = {props =>(
-                <User 
-                  { ...props} 
-                  getUser = {this.getUser}
-                  getUserRepos = {this.getUserRepos}
-                  repos = {repos}
-                  user = {user}
-                  loading = {loading}
-                />
-              )}/>
-            </Switch>
-
-
-          </div>
+            )} />
+          </Switch>
         </div>
-      </Router>
-    );
-  }
+      </div>
+    </Router>
+  );
 }
 
 export default App;
